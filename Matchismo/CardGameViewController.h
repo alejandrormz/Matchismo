@@ -10,4 +10,7 @@
 
 @interface CardGameViewController : UIViewController
 
+
+@property NSString *cardName;
+
 @end
