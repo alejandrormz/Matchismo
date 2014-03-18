@@ -15,6 +15,7 @@
 @property (strong, nonatomic) CardMatchingGame *game;
 @property (strong, nonatomic) IBOutletCollection(UIButton) NSArray *cardButtons;
 @property (weak, nonatomic) IBOutlet UILabel *scoreLabel;
+@property (weak, nonatomic) IBOutlet UISegmentedControl *cardsToMatch;
 
 @end
 
@@ -24,14 +25,14 @@
 -(CardMatchingGame *)game
 {
     if (!_game) _game = [[CardMatchingGame alloc] initWithCardCount:[self.cardButtons count]
-                                                          usingDeck:[self createDeck]];
+                                                          usingDeck:[self createDeck]
+                                           withHowManyMatchingCards:self.cardsToMatchSegmentedControl.selectedSegmentIndex];
     return _game;
 }
 
--(void)viewDidLoad {
+-(void)viewDidLoad
+{
     [super viewDidLoad];
-
-    
 }
 
 -(Deck *)createDeck
@@ -40,11 +41,26 @@
 }
 
 - (IBAction)touchCardButton:(UIButton *)sender {
+    self.cardsToMatch.enabled = FALSE;
     int chosenButtonIndex = [self.cardButtons indexOfObject:sender];
     [self.game chooseCardAtIndex:chosenButtonIndex];
     [self updateUI];
-    
 }
+
+// ASSIGNMENT 2 - Add a button to redeal all the cards
+// If time allows, add Dialog box to confirm...
+- (IBAction)dealCards:(UIButton *)sender {
+    // nil the game and reset status
+    self.game = nil;
+    self.scoreLabel.text = @"Score: 0";
+    [self updateUI];
+    self.cardsToMatch.enabled = YES;
+}
+
+- (IBAction)cardsToMatchChanged:(UISegmentedControl *)sender {
+    [self.game setNumberOfCardsToMatch:self.cardsToMatchSegmentedControl.selectedSegmentIndex+2];
+}
+
 
 -(void)updateUI
 {
@@ -61,6 +77,9 @@
         
         // Update the score (using the same code we used for Flips)
         self.scoreLabel.text = [NSString stringWithFormat:@"Score: %d", self.game.score];
+        
+        // Update the Move Results Label
+        self.moveResultsLabel.text = self.game.moveResults;
     }
 }
 

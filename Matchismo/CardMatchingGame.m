@@ -13,9 +13,14 @@
 @property (nonatomic, readwrite)NSInteger score;
 // Keep track of cards
 @property (nonatomic, strong) NSMutableArray *cards; // of Cards
+
+@property (nonatomic, readwrite) NSString *moveResults;
+
 @end
 
 @implementation CardMatchingGame
+
+@synthesize numberOfCardsToMatch;
 
 // Lazy Instantiation
 -(NSMutableArray *)cards
@@ -33,6 +38,7 @@
  */
 -(instancetype)initWithCardCount:(NSUInteger)count
                        usingDeck:(Deck *)deck
+        withHowManyMatchingCards:(int)matchMode
 {
     // Super class initializes itself
     self = [super init];
@@ -48,7 +54,9 @@
                 break;
             }
         }
+        self.numberOfCardsToMatch = (matchMode ==0) ? 2 : 3;
     }
+    
     return self;
 }
 
@@ -65,38 +73,79 @@ static const int COST_TO_CHOOSE = 1;
 -(void)chooseCardAtIndex:(NSUInteger)index
 {
     Card *card = [self cardAtIndex:index];
-    // Only allow unmatched cards to be chosen
-    if(!card.isMatched) {
+    
+    if (!card.isMatched) {
         if (card.isChosen) {
             card.chosen = NO;
         } else {
-            // match against other chosen cards
-            // (iterate through all the cards in the game, looking for unmatched and already chosen
-            for (Card *otherCard in self.cards) {
-                if (otherCard.isChosen && !otherCard.isMatched) {
-                    // if we find another chosen, unmatched card, check to see if it matches the just chosen card using match: method
-                    int matchScore = [card match:@[otherCard]];
-                    // If there's a match, bump score!
-                    if (matchScore) {
-                        self.score += matchScore * MATCH_BONUS;
-                        // if it's a match, mark both as MATCHED
-                        otherCard.matched = YES;
-                        card.matched = YES;
-                    
-                    } else {
-                        // otherwise impose a penalty
-                        self.score -= MISMATCH_PENALTY;
-                        // In case of MISMATCH, "unchoose" the mismatching other card
-                        otherCard.chosen = NO;
-                    }
-                    break; // can only choose 2 cards for now!
+            NSMutableArray *otherMatchableCards = [[NSMutableArray alloc] init];
+            NSMutableArray *otherMatchableCardsContents = [[NSMutableArray alloc] init];
+            
+            // Look for PLAYABLE cards (faceUp)
+            for (Card *matchableCard in self.cards) {
+                if (matchableCard.isChosen && !matchableCard.isMatched) {
+                    // Populate an array of comparable cards
+                    [otherMatchableCards addObject:matchableCard];
+                    [otherMatchableCardsContents addObject:matchableCard.contents];
+                }
+            }
+        
+            NSLog(@"================================================================");
+            int counter = 0;
+            for (Card *myCard in self.cards) {
+                NSLog(@"Card # %d %@ : isChosen: %d : isMatched: %d", counter, myCard.contents, myCard.isChosen, myCard.isMatched);
+                counter++;
+            }
+        
+            NSLog(@"NUMBER OF CARDS TO MATCH: %d", self.numberOfCardsToMatch);
+            
+            // TODO: Add a text label somewhere which desribes the results of the last consideration by the CardMatchingGame of a card choice by the user.
+            // Examples:
+            // 1) “Matched J♥ J♠ for 4 points.” or
+            // 2) “6♦ J♣ don’t match! 2 point penalty!”
+            // 3) “8♦” if only one card is chosen or even blank if no cards are chosen.
+            
+            // MATCHING HAPPENS HERE
+            if ([otherMatchableCards count] > 0) {
+                for (Card *otherCard in self.cards) {
+                    if (otherCard.isChosen && !otherCard.isMatched) {
+                        // If we find another chosen, unmatched card, check to see if it matches using the score
+                        int matchScore = [card match:otherMatchableCards];
+                        if (matchScore) {
+                            self.moveResults = [NSString stringWithFormat:@"%@, %@", card.contents, otherCard.contents];
+                            self.score += matchScore * MATCH_BONUS;
+                            // if it's a match mark all matched cards as MATCHED
+                            if ([otherMatchableCards count] == numberOfCardsToMatch - 1) {
+                                self.moveResults = [NSString stringWithFormat:@"Matched %@ for %d points!", [[[otherMatchableCardsContents componentsJoinedByString:@", "] stringByAppendingString:@" and "] stringByAppendingString:card.contents], matchScore * MATCH_BONUS];
+                                card.matched = YES;
+                                for (Card *myCard in self.cards ){
+                                    if (myCard.isChosen && !myCard.isMatched) {
+                                        myCard.matched = YES;
+                                    }
+                                }
+                            }
+                        } else {
+                            // Impose PENALTY for NO_MATCH
+                            self.score -= MISMATCH_PENALTY;
+                            self.moveResults = [NSString stringWithFormat:@"%@ don't match! %d point penalty!", [[[otherMatchableCardsContents componentsJoinedByString:@", "] stringByAppendingString:@" and "] stringByAppendingString:card.contents], MISMATCH_PENALTY];
+                            
+                            // Unselect card(s)
+                            for (Card *myCard in self.cards ){
+                                if (myCard.isChosen && !myCard.isMatched) {
+                                    myCard.chosen = NO;
+                                }
+                            }
+                        }
                     }
                 }
-            // Choosing cards will impose a "cost"
-            self.score -= COST_TO_CHOOSE;
+            } else {
+                self.moveResults = card.contents;
+            }
             card.chosen = YES;
         }
-        
+        // Choosing cards ALWAYS imposes a COSR
+        self.score -= COST_TO_CHOOSE;
+        self.moveResults = [NSString stringWithFormat:@"Flipped up %@", card.contents];
     }
 }
 

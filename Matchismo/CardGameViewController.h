@@ -12,5 +12,7 @@
 
 
 @property NSString *cardName;
+@property (weak, nonatomic) IBOutlet UISegmentedControl *cardsToMatchSegmentedControl;
+@property (weak, nonatomic) IBOutlet UILabel *moveResultsLabel;
 
 @end

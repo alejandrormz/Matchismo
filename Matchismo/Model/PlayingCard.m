@@ -13,6 +13,8 @@
 -(int)match:(NSArray *)otherCards
 {
     int score = 0;
+    int matchingSuits = 0;
+    int matchingRanks = 0;
     
     // Only matches 1 card;
     // (will have to change this for assignment 2)
@@ -26,8 +28,25 @@
             // Give 1 point for matching the suit only
             score = 1;
         }
+    } else if ([otherCards count] > 1) {
+        // Matching more than 2 mode
+        for (PlayingCard *otherCard in otherCards)
+        {
+            if ([otherCard.suit isEqualToString:self.suit]) {
+                matchingSuits++;
+            } else {
+                if (otherCard.rank == self.rank) {
+                    matchingRanks++;
+                }
+            }
+        }
+        if (matchingRanks == [otherCards count]) {
+            score = 2 * [otherCards count] + 1;
+        } else if (matchingSuits == [otherCards count]) {
+            score = 1 * [otherCards count] + 1;
+        }
     }
-    
+
     return score;
 }
 
